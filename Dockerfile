@@ -4,6 +4,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential \
         curl \
+        git \
     && apt-get clean
 
 # setup user
@@ -29,3 +30,5 @@ COPY --chown=diamodel . .
 
 # switch to editable model
 RUN pip install -e ".[dev]" --no-deps
+
+CMD ["bash"]
