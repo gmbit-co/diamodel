@@ -29,7 +29,7 @@
       ],
       "settings": {
         "terminal.integrated.scrollback": 10000,
-        "editor.formatOnSave": true,
+        "editor.formatOnSave": true
       }
     }
   }
