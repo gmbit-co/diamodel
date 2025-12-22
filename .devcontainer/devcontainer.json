@@ -1,0 +1,36 @@
+// See https://containers.dev/implementors/json_reference/ for configuration reference
+{
+  "name": "diamodel",
+  "build": {
+    "args": {
+      "-t": "diamodel"
+    },
+    "context": "..",
+    "dockerfile": "../Dockerfile"
+  },
+  "workspaceFolder": "/home/diamodel/diamodel",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/home/diamodel/diamodel,type=bind,consistency=cached",
+  "mounts": [
+    "source=${localEnv:HOME}/.claude,target=/home/diamodel/.claude,type=bind",
+    "source=${localEnv:HOME}/.claude.json,target=/home/diamodel/.claude.json,type=bind"
+  ],
+  "runArgs": [
+    "--rm",
+    "--name=diamodel"
+  ],
+  "remoteUser": "diamodel",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "anthropic.claude-code",
+        "ms-python.python",
+        "ms-python.black-formatter",
+        "wardbrian.vscode-stan-extension"
+      ],
+      "settings": {
+        "terminal.integrated.scrollback": 10000,
+        "editor.formatOnSave": true,
+      }
+    }
+  }
+}
