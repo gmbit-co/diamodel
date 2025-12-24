@@ -7,7 +7,7 @@ A Bayesian model to estimate key parameters for managing Type 1 Diabetes (T1D). 
 ![BG Prediction](screenshots/bg_prediction.png)
 
 > [!IMPORTANT]
-> Disclaimer: This project is for research and educational purposes only. It is not intended for clinical use and should not be used to make medical decisions.
+> **Disclaimer**: This project is for research and educational purposes only. It is not intended for clinical use and should not be used to make medical decisions.
 
 ## Why Diamodel
 
@@ -100,6 +100,8 @@ The `Config` class contains configuration for data and training. Some of the imp
 There are two models: `InsulinModel` and `DiaModel`, which are the insulin-only and full model respectively. Both models have `select_chunks` methods that select subsets of data appropriate for fitting each model. Additionally, the Stan code contains hard-coded constants that need to be reviewed before fitting the model.
 
 We assume the data has intervals where only insulin is acting, so we can fit the insulin-only model to get a good prior for `isens`. If there are no such intervals, then the `isens` prior should be set manually. See `Fit.default()` for how the prior can be set.
+
+The models can be trained incrementally or using all data at once. The incremental mode is good to track changes in parameters over time, which can help answer questions such as "when does the honeymoon period end?"
 
 `ICR` and `CF` can be recovered from the model using the following equations:
 

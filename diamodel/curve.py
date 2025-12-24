@@ -18,6 +18,17 @@ class Curve:
     corr: float | np.ndarray
     sens: float | np.ndarray
 
+    @staticmethod
+    def cdf(tick: float, peak: np.ndarray | float, gscale: float, tail=1.0, scale=1.0):
+        """Given tick returns area under the curve as percentage"""
+        x = tick * gscale
+        return gengamma.cdf(x, peak, tail, scale=1)
+
+    @staticmethod
+    def ppf(perc: float, peak: np.ndarray | float, gscale: float, tail=1.0, scale=1.0):
+        """Given area under the curve returns tick"""
+        return gengamma.ppf(perc, peak, tail, scale=1) / gscale
+
     @property
     def key(self) -> CurveKey:
         return (self.start, self.amount)

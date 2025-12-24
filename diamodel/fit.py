@@ -118,6 +118,9 @@ class Fit:
     def to_dict(self):
         return asdict(self)
 
+    def copy(self):
+        return Fit(**asdict(self))
+
     def to_df(self):
         is_vector = lambda v: isinstance(v, np.ndarray) and len(v.shape) == 1
         d = self.to_dict()
@@ -153,6 +156,11 @@ class Fit:
 
     def __repr__(self):
         return str(self)
+
+    @property
+    def icr(self):
+        """Insulin-To-Carbs Ratio"""
+        return self.isens / self.csens
 
     def chunks_at(self, tick):
         assert self.chunks is not None

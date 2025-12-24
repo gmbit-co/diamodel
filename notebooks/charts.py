@@ -178,6 +178,58 @@ def plot_predictions(
     return (ch1 & ch2).resolve_scale(color="independent").resolve_legend(color="independent")
 
 
+def plot_curve_cdf(peak, cfg: dm.Config, height=300, width=400):
+    max_tick = dm.Curve.ppf(0.99, np.mean(peak), cfg.gscale)
+
+    # Create array of ticks from 0 to max_tick
+    ticks = np.linspace(0, max_tick, num=50)
+
+    # For each tick, compute CDF (percentage) with 5-95 percentile band
+    percs = [dm.Curve.cdf(t, peak, cfg.gscale) for t in ticks]
+
+    percs_mean = [np.mean(p) * 100 for p in percs]  # convert to percentage
+    percs5 = [np.percentile(p, 5) * 100 for p in percs]
+    percs95 = [np.percentile(p, 95) * 100 for p in percs]
+
+    # Convert ticks to hours
+    tick_to_hour = lambda t: t * cfg.dt / 60
+    hours = [tick_to_hour(t) for t in ticks]
+
+    df = pd.DataFrame(
+        {
+            "hours": hours,
+            "percentage": percs_mean,
+            "p5": percs5,
+            "p95": percs95,
+        }
+    )
+
+    ch_line = (
+        alt.Chart(df)
+        .mark_line(strokeWidth=2, point={"size": 20})
+        .encode(
+            x="hours",
+            y="percentage",
+        )
+    )
+
+    ch_band = (
+        alt.Chart(df)
+        .mark_area(opacity=0.3)
+        .encode(
+            x="hours",
+            y=alt.Y("p5"),
+            y2=alt.Y2("p95"),
+        )
+    )
+
+    return (ch_line + ch_band).properties(
+        title="Curve Activity Time",
+        height=height,
+        width=width,
+    )
+
+
 def plot_fits_density(name, ifits, height=200, width=600):
     get_samples = lambda name: [getattr(f.posterior, name) for f in ifits]
 
