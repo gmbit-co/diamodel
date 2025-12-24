@@ -6,6 +6,9 @@ A Bayesian model to estimate key parameters for managing Type 1 Diabetes (T1D). 
 
 ![BG Prediction](screenshots/bg_prediction.png)
 
+> [!IMPORTANT]
+> Disclaimer: This project is for research and educational purposes only. It is not intended for clinical use and should not be used to make medical decisions.
+
 ## Why Diamodel
 
 Managing T1D is like playing [Flappy Bird](https://flappybird.io/) nonstop in real life. Eating carbs raises blood sugar; taking insulin lowers it. The goal is to keep blood sugar within a target range (typically 4–10 mmol/L) so the body can function correctly. To "play" this lifelong game well, one needs to know how much carbs or insulin to take given the current glucose level (the bird's position) and all recent treatments (the bird's momentum). The challenge is that you don't know how the game physics works for each individual with T1D, i.e., the sensitivity of controls, and have to discover it by playing. But that's not all: the game physics changes over time, so one has to observe the changing dynamics and adapt accordingly.
