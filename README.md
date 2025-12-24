@@ -1,5 +1,7 @@
 # Diamodel
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1oh_RYEycgCcNHWL1tTdGOQMmYUCQD-Tu)
+
 A Bayesian model to estimate key parameters for managing Type 1 Diabetes (T1D). The model takes CGM sensor readings, carbs, and insulin intake as input and estimates Insulin-to-Carbs Ratio (ICR), Correction Factor (CF), and Insulin Activity Time.
 
 ![ICR Posterior](screenshots/icr_posterior.png)
@@ -74,6 +76,9 @@ Diamodel does not model Hepatic Glucose Output (HGO, liver producing glucose) or
 There are multiple options for how CGM noise can be modelled. The default model is an AR(1) process with autocorrelation coefficient `rho`. We assume that if CGM readings are off, they continue to be off for some time. The choice of CGM noise model will impact how Diamodel parameters are estimated. The `sigma` parameter represents total CGM noise.
 
 ## How To Use
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1oh_RYEycgCcNHWL1tTdGOQMmYUCQD-Tu)
+
 
 Diamodel takes CGM, carbs and insulin data as input. Carbs and insulin should be aligned to CGM ticks.
 
