@@ -111,3 +111,27 @@ CF = isens
 ```
 
 See [analyze.ipynb](./notebooks/analyze.ipynb) for how to fit the models and generate predictions.
+
+## Development
+
+The easiest way to run the code is to open the project in VSCode using Dev Container.
+
+Inside running container:
+
+```sh
+# run tests
+pytest .
+
+# run notebooks
+jupyter lab --ip 0.0.0.0 --port=8888 --allow-root --no-browser
+```
+
+To run a standalone container
+
+```sh
+# build the image
+docker build -t diamodel .
+
+# run dev container from the project root
+docker run -it --rm --name=diamodel -p 8888:8888 -v $(pwd):/home/diamodel/diamodel diamodel /bin/bash
+```
