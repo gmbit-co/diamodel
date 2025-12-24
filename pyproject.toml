@@ -21,7 +21,8 @@ dev = [
     "jupyterlab_code_formatter~=3.0.2",
     "matplotlib~=3.10.8",
     "pytest~=9.0.2",
-    "seaborn~=0.13.2"
+    "seaborn~=0.13.2",
+    "vl-convert-python~=1.8.0"
 ]
 
 [tool.setuptools.packages.find]
