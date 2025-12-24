@@ -1,3 +1,7 @@
+# Ignore stan binaries (files without extensions)
+diamodel/stan/*
+!diamodel/stan/*.*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
