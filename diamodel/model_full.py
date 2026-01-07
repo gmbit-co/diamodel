@@ -51,14 +51,19 @@ class DiaModel:
         sizes = [v for sub in sizes for v in sub]
         chunks = pd.Series(sizes, index=anchors)
 
-        # filter out small chunks
-        chunks = chunks[chunks > 30 // cfg.dt]
-
-        # filter out chunks that overlap with cgm's NaN
+        # truncate chunks at first NaN in cgm
         cgm = data_df["cgm"]
-        cgm_chunks = [cgm.loc[a : a + s] for a, s in chunks.items()]  # chunk size: maxpred+1
-        mask = [not c.hasnans for c in cgm_chunks]
-        chunks = chunks[mask]
+        new_sizes = []
+        for a, s in chunks.items():
+            chunk_cgm = cgm.loc[a : a + s]
+            if chunk_cgm.hasnans:
+                new_sizes.append(chunk_cgm.isna().argmax() - 1)
+            else:
+                new_sizes.append(s)
+        chunks = pd.Series(new_sizes, index=chunks.index)
+
+        # filter out small chunks
+        chunks = chunks[chunks > 12 // cfg.dt]
 
         # check all chunks have bolus
         assert all(not bolus.loc[a - cfg.maxact + 1 : a + s - 1].empty for a, s in chunks.items())  # type: ignore[arg-type]
