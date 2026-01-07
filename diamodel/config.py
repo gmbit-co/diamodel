@@ -18,7 +18,7 @@ class Config:
     def default_config(name: str = "default", dt=5) -> "Config":
         """Create a Config instance with default parameters."""
         # all times are in mins
-        maxact = round(9 * 60 / dt)
+        maxact = round(6 * 60 / dt)
         maxpred = round(4 * 60 / dt)
 
         # 1h = 2 gamma, 1 tick = `gscale` gamma
