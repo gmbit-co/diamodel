@@ -1,3 +1,5 @@
+.DS_Store
+
 # Ignore stan binaries (files without extensions)
 diamodel/stan/*
 !diamodel/stan/*.*
