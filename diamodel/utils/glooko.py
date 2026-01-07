@@ -15,24 +15,40 @@ import pandas as pd
 
 def load_cgm(file_path: Path) -> pd.DataFrame:
     """Load CGM data from Glooko export CSV."""
+    if not file_path.exists():
+        raise FileNotFoundError(f"CGM data file not found: {file_path}")
+
+    # Detect CGM units from column names
+    headers = pd.read_csv(file_path, skiprows=1, nrows=0).columns
+    if "CGM Glucose Value (mg/dl)" in headers:
+        col_name = "CGM Glucose Value (mg/dl)"
+        convert_to_mmol = True
+    else:
+        col_name = "CGM Glucose Value (mmol/l)"
+        convert_to_mmol = False
+
     df = pd.read_csv(
         file_path,
-        dtype={"CGM Glucose Value (mmol/l)": "float64"},
+        dtype={col_name: "float64"},
         skiprows=1,
         parse_dates=["Timestamp"],
     )
     df.rename(
         columns={
             "Timestamp": "timestamp",
-            "CGM Glucose Value (mmol/l)": "cgm",
+            col_name: "cgm",
         },
         inplace=True,
     )
+    if convert_to_mmol:
+        df["cgm"] = round(df["cgm"] / 18.0156, 1)  # to mmol/L
     return df[["timestamp", "cgm"]]
 
 
 def load_bolus(file_path: Path) -> pd.DataFrame:
     """Load bolus data from Glooko export CSV."""
+    if not file_path.exists():
+        raise FileNotFoundError(f"Bolus data file not found: {file_path}")
     df = pd.read_csv(
         file_path,
         dtype={
@@ -53,8 +69,12 @@ def load_bolus(file_path: Path) -> pd.DataFrame:
     return df[["timestamp", "carbs", "insulin"]]
 
 
-def create_dataset(cgm_df: pd.DataFrame, bolus_df: pd.DataFrame, dt: int) -> pd.DataFrame:
-    """Create aligned time-series dataset from CGM and bolus data."""
+def load_dataset(glooko_export_dir: str | Path, dt: int = 5) -> pd.DataFrame:
+    """Load and create aligned time-series dataset from Glooko export folder."""
+    export_dir = Path(glooko_export_dir)
+    cgm_df = load_cgm(export_dir / "cgm_data_1.csv")
+    bolus_df = load_bolus(export_dir / "Insulin data" / "bolus_data_1.csv")
+
     start_time = cgm_df["timestamp"].min()
 
     def ts_to_tick(ts):
@@ -66,7 +86,7 @@ def create_dataset(cgm_df: pd.DataFrame, bolus_df: pd.DataFrame, dt: int) -> pd.
     n = ts_to_tick(cgm_df["timestamp"].max())
 
     data_df = pd.DataFrame({"tick": range(n + 1)})
-    data_df.set_index("tick", inplace=True)
+    data_df.set_index("tick", inplace=True, drop=False)
     data_df["timestamp"] = data_df.index.map(tick_to_ts)
 
     cgm_ticks = cgm_df["timestamp"].map(ts_to_tick)
@@ -104,25 +124,8 @@ def main():
 
     args = parser.parse_args()
 
-    export_dir = Path(args.glooko_export_dir)
-    cgm_path = export_dir / "cgm_data_1.csv"
-    bolus_path = export_dir / "Insulin data" / "bolus_data_1.csv"
-
-    if not cgm_path.exists():
-        raise FileNotFoundError(f"CGM data file not found: {cgm_path}")
-    if not bolus_path.exists():
-        raise FileNotFoundError(f"Bolus data file not found: {bolus_path}")
-
-    print(f"Loading CGM data from: {cgm_path}")
-    cgm_df = load_cgm(cgm_path)
-    print(f"  Loaded {len(cgm_df)} CGM readings")
-
-    print(f"Loading bolus data from: {bolus_path}")
-    bolus_df = load_bolus(bolus_path)
-    print(f"  Loaded {len(bolus_df)} bolus events")
-
-    print(f"Creating aligned dataset with dt={args.dt} minutes...")
-    data_df = create_dataset(cgm_df, bolus_df, args.dt)
+    print(f"Loading dataset from: {args.glooko_export_dir}")
+    data_df = load_dataset(args.glooko_export_dir, args.dt)
     print(f"  Created {len(data_df)} time points")
 
     print(f"Saving to: {args.output}")
