@@ -6,7 +6,9 @@ import altair as alt
 import diamodel as dm
 
 
-def plot_density(name, posterior: dm.Fit, prior: Optional[dm.Fit] = None, width=400, height=200):
+def plot_density(
+    name, posterior: dm.Fit, prior: Optional[dm.Fit] = None, title=None, width=400, height=200
+):
     posterior = getattr(posterior, name)
     df = pd.DataFrame({name: posterior, "kind": "posterior"})
 
@@ -14,6 +16,8 @@ def plot_density(name, posterior: dm.Fit, prior: Optional[dm.Fit] = None, width=
         prior = getattr(prior, name)
         prior_df = pd.DataFrame({name: prior, "kind": "prior"})
         df = pd.concat([df, prior_df], ignore_index=True)
+
+    title = f"{name.upper()}" if title is None else title
 
     chart = (
         alt.Chart(df)
@@ -30,9 +34,34 @@ def plot_density(name, posterior: dm.Fit, prior: Optional[dm.Fit] = None, width=
             alt.Y("density:Q").stack(None),
             alt.Color("kind:N"),
         )
-        .properties(width=width, height=height, title=f"{name} density")
+        .properties(width=width, height=height, title=title)
     )
     return chart
+
+
+def plot_fit_params(
+    posterior: dm.Fit, cfg: dm.Config, prior: Optional[dm.Fit] = None, width=300, height=200
+):
+    """Plot 2x2 grid of fit parameter distributions."""
+    icr = plot_density("icr", posterior, prior=prior, width=width, height=height)
+    prior_ipeak = prior.ipeak if prior is not None else None
+    iat = plot_curve_cdf(
+        posterior.ipeak,
+        cfg,
+        prior=prior_ipeak,
+        title="Insulin Action Time",
+        width=width,
+        height=height,
+    )
+    isens = plot_density(
+        "isens", posterior, prior=prior, title="Insulin Sensitivity", width=width, height=height
+    )
+    csens = plot_density(
+        "csens", posterior, prior=prior, title="Carbs Sensitivity", width=width, height=height
+    )
+
+    grid = ((icr | iat) & (isens | csens)).resolve_scale(x="independent", y="independent")
+    return grid
 
 
 def predict(ticka: int, tickb: int, fit: dm.Fit, cfg: dm.Config, bg0=None, bolus_df=None):
@@ -178,31 +207,28 @@ def plot_predictions(
     return (ch1 & ch2).resolve_scale(color="independent").resolve_legend(color="independent")
 
 
-def plot_curve_cdf(peak, cfg: dm.Config, height=300, width=400):
-    max_tick = dm.Curve.ppf(0.99, np.mean(peak), cfg.gscale)
-
-    # Create array of ticks from 0 to max_tick
-    ticks = np.linspace(0, max_tick, num=50)
-
-    # For each tick, compute CDF (percentage) with 5-95 percentile band
-    percs = [dm.Curve.cdf(t, peak, cfg.gscale) for t in ticks]
-
-    percs_mean = [np.mean(p) * 100 for p in percs]  # convert to percentage
-    percs5 = [np.percentile(p, 5) * 100 for p in percs]
-    percs95 = [np.percentile(p, 95) * 100 for p in percs]
-
-    # Convert ticks to hours
+def plot_curve_cdf(
+    peak, cfg: dm.Config, prior=None, title="Curve Action Time", height=300, width=400
+):
     tick_to_hour = lambda t: t * cfg.dt / 60
-    hours = [tick_to_hour(t) for t in ticks]
 
-    df = pd.DataFrame(
-        {
-            "hours": hours,
-            "percentage": percs_mean,
-            "p5": percs5,
-            "p95": percs95,
-        }
-    )
+    def make_df(peak, kind):
+        max_tick = dm.Curve.ppf(0.99, np.mean(peak), cfg.gscale)
+        ticks = np.linspace(0, max_tick, num=50)
+        percs = [dm.Curve.cdf(t, peak, cfg.gscale) for t in ticks]
+        return pd.DataFrame(
+            {
+                "hours": [tick_to_hour(t) for t in ticks],
+                "percentage": [np.mean(p) * 100 for p in percs],
+                "p5": [np.percentile(p, 5) * 100 for p in percs],
+                "p95": [np.percentile(p, 95) * 100 for p in percs],
+                "kind": kind,
+            }
+        )
+
+    df = make_df(peak, "posterior")
+    if prior is not None:
+        df = pd.concat([df, make_df(prior, "prior")], ignore_index=True)
 
     ch_line = (
         alt.Chart(df)
@@ -210,6 +236,7 @@ def plot_curve_cdf(peak, cfg: dm.Config, height=300, width=400):
         .encode(
             x="hours",
             y="percentage",
+            color="kind:N",
         )
     )
 
@@ -220,11 +247,12 @@ def plot_curve_cdf(peak, cfg: dm.Config, height=300, width=400):
             x="hours",
             y=alt.Y("p5"),
             y2=alt.Y2("p95"),
+            color="kind:N",
         )
     )
 
     return (ch_line + ch_band).properties(
-        title="Curve Activity Time",
+        title=title,
         height=height,
         width=width,
     )
