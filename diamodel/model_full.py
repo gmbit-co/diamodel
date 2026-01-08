@@ -25,7 +25,9 @@ class DiaModel:
         self.cfg = cfg
         self.stan_file = Path(__file__).parent / "stan/model_full.stan"
 
-    def select_chunks(self, data_df: pd.DataFrame) -> pd.Series:
+    def select_chunks(
+        self, data_df: pd.DataFrame, between_hours: tuple[int, int] | None = None
+    ) -> pd.Series:
         """Selects chunks (prediction intervals) for training."""
         cfg = self.cfg
         bolus = data_df[(data_df["carbs"] > 0) | (data_df["insulin"] > 0)]
@@ -51,8 +53,15 @@ class DiaModel:
         sizes = [v for sub in sizes for v in sub]
         chunks = pd.Series(sizes, index=anchors)
 
-        # truncate chunks at first NaN in cgm
         cgm = data_df["cgm"]
+        if between_hours is not None:
+            start_hour, end_hour = between_hours
+            hour = data_df["timestamp"].dt.hour  # type: ignore[arg-type]
+            mask = (hour >= start_hour) & (hour < end_hour)
+            cgm = cgm.copy()
+            cgm.loc[~mask] = float("nan")
+
+        # truncate chunks at first NaN in cgm
         new_sizes = []
         for a, s in chunks.items():
             chunk_cgm = cgm.loc[a : a + s]
