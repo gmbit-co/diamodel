@@ -4,7 +4,7 @@
 
 A Bayesian model to estimate key parameters for managing Type 1 Diabetes (T1D). The model takes CGM sensor readings, carbs, and insulin intake as input and estimates Insulin-to-Carbs Ratio (ICR), Correction Factor (CF), and Insulin Activity Time.
 
-![ICR Posterior](screenshots/icr_posterior.png)
+![Key Fit Params](screenshots/fit_params.png)
 
 ![BG Prediction](screenshots/bg_prediction.png)
 
@@ -13,7 +13,7 @@ A Bayesian model to estimate key parameters for managing Type 1 Diabetes (T1D). 
 
 ## Why Diamodel
 
-Managing T1D is like playing [Flappy Bird](https://flappybird.io/) nonstop in real life. Eating carbs raises blood sugar; taking insulin lowers it. The goal is to keep blood sugar within a target range (typically 4–10 mmol/L) so the body can function correctly. To "play" this lifelong game well, one needs to know how much carbs or insulin to take given the current glucose level (the bird's position) and all recent treatments (the bird's momentum). The challenge is that you don't know how the game physics works for each individual with T1D, i.e., the sensitivity of controls, and have to discover it by playing. But that's not all: the game physics changes over time, so one has to observe the changing dynamics and adapt accordingly.
+Managing T1D is like playing [Flappy Bird](https://flappybird.io/) nonstop in real life. Eating carbs raises blood sugar; taking insulin lowers it. The goal is to keep blood sugar within a target range (typically 4–10 mmol/L) so the body can function correctly. To "play" this lifelong game well, one needs to know how many carbs or insulin units to take given the current glucose level (the bird's position) and all recent treatments (the bird's momentum). The challenge is that you don't know how the game physics works for each individual with T1D, i.e., the sensitivity of controls, and have to discover it by playing. But that's not all: the game physics changes over time, so one has to observe the changing dynamics and adapt accordingly.
 
 ![Flappy Bird](screenshots/Flappy-Bird.jpg)
 
@@ -31,7 +31,7 @@ Even if the doctor were able to specify these parameters correctly, blood glucos
 
 So in reality, everything around diabetes management has uncertainty. All parameters and inputs (blood glucose, carb amounts, and insulin units) have approximate values.
 
-Diamodel tries to address these and other challenges by providing a data-driven way to estimate parameter distributions under uncertainty. Unlike more physiologically accurate models like UVA/Padova, Diamodel focuses on practical aspects of managing diabetes by using the same key parameters (ICR, CF) of the standard model. It tries to answer "what are the best ICR and CF values should we use given observed noisy data?".
+Diamodel tries to address these and other challenges by providing a data-driven way to estimate parameter distributions under uncertainty. Unlike more physiologically accurate models like UVA/Padova, Diamodel focuses on practical aspects of managing diabetes by using the same key parameters (ICR, CF) of the standard model. It tries to answer "what are the best ICR and CF values to use given observed noisy data?".
 
 ## How It Works
 
@@ -58,20 +58,22 @@ IAR(t) = sum([curve(t, start, amount, ipeak) for start, amount in insulin])
 * `ipeak` - insulin curve peak parameter
 * `curve(start, amount, t, peak)` - absorption response curve; represents the rate at which a given treatment (carbs or insulin) is absorbed over time.
 
-Each treatment (carbs or insulin) is modelled with its own absorption curve. We use the [Gamma Distribution](https://en.wikipedia.org/wiki/Gamma_distribution) probability density function as the basis for absorption curves. The function has the convenient properties of integrating to 1 and having a single shape parameter, which we call "peak" because it roughly corresponds to the curve's peak location. The scale parameter of the Gamma PDF is always 1.
+Each treatment (carbs or insulin) is modelled with its own absorption curve. We use the [Gamma Distribution](https://en.wikipedia.org/wiki/Gamma_distribution) probability density function as the basis for absorption curves since it resembles Insulin Action Profiles. The function has the convenient properties of integrating to 1 and having a single shape parameter, which we call "peak" because it roughly corresponds to the curve's peak location. The scale parameter of the Gamma PDF is always 1.
 
 ![Gamma PDF](screenshots/gamma_pdf.png)
 
-All insulin curves have the same shape (`ipeak`). Carbs curves have individual shapes (`cpeaki[i]`) so we can model "fast, medium, and slow" carbs absorption rates for each meal. In addition, carbs curves have individual amount corrections (`ccorri[i]`) to factor in uncertainty in carbs counting and allow the model to adjust carbs amounts to better fit observed data.
+All insulin treatments have the same curve parametrized by `ipeak` shape parameter. Each carbs treatment has an individual curve parametrized by `cpeaki[i]` shape parameter so we can model "fast, medium, and slow" absorption rates for each meal. In addition, carbs curves have individual amount corrections `ccorri[i]` to factor in uncertainty in carbs counting and allow the model to adjust carbs amounts to better fit observed data.
 
 It's important to note that the simple formulation of Diamodel does not allow us to "fully" recover certain parameters from CGM observations alone, even if we had an infinite amount of data. This results in correlated parameter estimates where multiple combinations of parameters would produce the same likelihood. In the following equation, both `csens` and `isens` can be increased or decreased to achieve the same `dBG(t)` value:
 ```
 dBG(t) = csens * CAR(t) - isens * IAR(t)
 ```
 
-To address this non-identifiability issue, we first fit an insulin-only model on "insulin-only data" to estimate `isens`. Then we use it to set a tight prior for `isens` to guide the full model to pick a more realistic combination for `csens` and `isens`.
+To address this non-identifiability issue we can either set tight priors on `isens` or use data with only insulin activity to estimate `isens`.
 
-Diamodel does not model Hepatic Glucose Output (HGO, liver producing glucose) or Basal Insulin. Although the model can be extended to include these factors, we instead focus on selecting training intervals where these factors can be ignored in order to keep the model simple. For example, we assume that intervals right after meals have low HGO and as a result require low basal insulin coming from a pump. If basal insulin is given via injection, then a constant rate offset should be added to `IAR(t)`.
+Diamodel does not model Hepatic Glucose Output (HGO, liver producing glucose), Basal Insulin or "Morning Insulin Resistance". Although the model can be extended to include these factors, we instead focus on selecting training intervals where these factors can be either captured or ignored in order to keep the model simple. For example, we assume that intervals right after meals have low HGO and as a result require low basal insulin coming from a pump. If basal insulin is given via injection, then a constant rate offset should be added to `IAR(t)`.
+
+![Models trained on morning, daytime and evening data](screenshots/icr_day_change.gif)
 
 There are multiple options for how CGM noise can be modelled. The default model is an AR(1) process with autocorrelation coefficient `rho`. We assume that if CGM readings are off, they continue to be off for some time. The choice of CGM noise model will impact how Diamodel parameters are estimated. The `sigma` parameter represents total CGM noise.
 
@@ -80,7 +82,7 @@ There are multiple options for how CGM noise can be modelled. The default model 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1oh_RYEycgCcNHWL1tTdGOQMmYUCQD-Tu)
 
 
-Diamodel takes CGM, carbs and insulin data as input. Carbs and insulin should be aligned to CGM ticks.
+Diamodel takes CGM, carbs, and insulin data as input. Carbs and insulin should be aligned to CGM ticks.
 
 ```
           timestamp  cgm  carbs  insulin
@@ -92,7 +94,8 @@ Diamodel takes CGM, carbs and insulin data as input. Carbs and insulin should be
 ...
 ```
 
-Note that if data has missing treatments like carbs or insulin, it will cause bias in parameter estimation.
+> [!IMPORTANT]
+> Note that if data has missing treatments like carbs or insulin, it will cause bias in parameter estimation.
 
 The model outputs a joint posterior probability of all parameters encapsulated in the `Fit` class. `Fit` can represent both prior and posterior probabilities of the parameters. `Fit.default()` specifies the default prior, which needs to be adjusted for each patient.
 
@@ -102,7 +105,7 @@ The `Config` class contains configuration for data and training. Some of the imp
 * `maxact` - maximum curve duration, ticks
 * `maxpred` - maximum prediction interval duration
 
-There are two models: `InsulinModel` and `DiaModel`, which are the insulin-only and full model respectively. Both models have `select_chunks` methods that select subsets of data appropriate for fitting each model. Additionally, the Stan code contains hard-coded constants that need to be reviewed before fitting the model.
+There are two models: `InsulinModel` and `DiaModel`, which are the insulin-only and full models respectively. Both models have `select_chunks` methods that select subsets of data appropriate for fitting each model. Additionally, the Stan code contains hard-coded constants that need to be reviewed before fitting the model.
 
 We assume the data has intervals where only insulin is acting, so we can fit the insulin-only model to get a good prior for `isens`. If there are no such intervals, then the `isens` prior should be set manually. See `Fit.default()` for how the prior can be set.
 
