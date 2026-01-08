@@ -40,7 +40,12 @@ def plot_density(
 
 
 def plot_fit_params(
-    posterior: dm.Fit, cfg: dm.Config, prior: Optional[dm.Fit] = None, width=300, height=200
+    posterior: dm.Fit,
+    cfg: dm.Config,
+    prior: Optional[dm.Fit] = None,
+    title="Key Fit Params",
+    width=300,
+    height=200,
 ):
     """Plot 2x2 grid of fit parameter distributions."""
     icr = plot_density("icr", posterior, prior=prior, width=width, height=height)
@@ -60,7 +65,11 @@ def plot_fit_params(
         "csens", posterior, prior=prior, title="Carbs Sensitivity", width=width, height=height
     )
 
-    grid = ((icr | iat) & (isens | csens)).resolve_scale(x="independent", y="independent")
+    grid = (
+        ((icr | iat) & (isens | csens))
+        .resolve_scale(x="independent", y="independent")
+        .properties(title=alt.TitleParams(title, anchor="middle"))
+    )
     return grid
 
 
@@ -95,7 +104,7 @@ def plot_bg(pred_df, xaxis="timestamp", height=200, width=600):
     cgm["val90"] = np.nan
 
     pbg = pred_df[["tick", "timestamp"]].copy()
-    pbg["kind"] = "prediction"
+    pbg["kind"] = "bg prediction"
 
     pbg["val"] = pred_df["bg"].map(np.mean)
     pbg["val10"] = pred_df["bg"].map(lambda a: np.percentile(a, 10))
@@ -111,7 +120,7 @@ def plot_bg(pred_df, xaxis="timestamp", height=200, width=600):
             y=alt.Y("val").scale(zero=False),
             color=alt.Color(
                 "kind",
-                scale=alt.Scale(domain=["cgm", "prediction"], range=["green", "#1f77b4"]),
+                scale=alt.Scale(domain=["cgm", "bg prediction"], range=["green", "#1f77b4"]),
             ),
         )
     )
@@ -295,7 +304,7 @@ def plot_fits_density(name, ifits, height=200, width=600):
     )
 
     return (ch_line + chart_band).properties(
-        title=f"{name} Posterior Distribution",
+        title=f"{name.upper()} Posterior Distribution",
         height=height,
         width=width,
     )
