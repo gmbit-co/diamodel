@@ -25,7 +25,9 @@ class DiaModel:
         self.cfg = cfg
         self.stan_file = Path(__file__).parent / "stan/model_full.stan"
 
-    def select_chunks(self, data_df: pd.DataFrame) -> pd.Series:
+    def select_chunks(
+        self, data_df: pd.DataFrame, between_hours: tuple[int, int] | None = None
+    ) -> pd.Series:
         """Selects chunks (prediction intervals) for training."""
         cfg = self.cfg
         bolus = data_df[(data_df["carbs"] > 0) | (data_df["insulin"] > 0)]
@@ -51,14 +53,26 @@ class DiaModel:
         sizes = [v for sub in sizes for v in sub]
         chunks = pd.Series(sizes, index=anchors)
 
-        # filter out small chunks
-        chunks = chunks[chunks > 30 // cfg.dt]
-
-        # filter out chunks that overlap with cgm's NaN
         cgm = data_df["cgm"]
-        cgm_chunks = [cgm.loc[a : a + s] for a, s in chunks.items()]  # chunk size: maxpred+1
-        mask = [not c.hasnans for c in cgm_chunks]
-        chunks = chunks[mask]
+        if between_hours is not None:
+            start_hour, end_hour = between_hours
+            hour = data_df["timestamp"].dt.hour  # type: ignore[arg-type]
+            mask = (hour >= start_hour) & (hour < end_hour)
+            cgm = cgm.copy()
+            cgm.loc[~mask] = float("nan")
+
+        # truncate chunks at first NaN in cgm
+        new_sizes = []
+        for a, s in chunks.items():
+            chunk_cgm = cgm.loc[a : a + s]
+            if chunk_cgm.hasnans:
+                new_sizes.append(chunk_cgm.isna().argmax() - 1)
+            else:
+                new_sizes.append(s)
+        chunks = pd.Series(new_sizes, index=chunks.index)
+
+        # filter out small chunks
+        chunks = chunks[chunks > 12 // cfg.dt]
 
         # check all chunks have bolus
         assert all(not bolus.loc[a - cfg.maxact + 1 : a + s - 1].empty for a, s in chunks.items())  # type: ignore[arg-type]

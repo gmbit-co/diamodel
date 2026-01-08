@@ -54,11 +54,11 @@ class Fit:
         """Default prior"""
         # mean prior values
         fit: dict[str, Any] = {
-            "isens": 5.0,  # mmol/L / unit
+            "isens": 4.5,  # mmol/L / unit
             "ipeak": 90.0 / cfg.dt * cfg.gscale,
             "sigma": 1.0,  # mmol/L
             "rho": 0.9,
-            "csens": 0.3,  # mmol/L / gram
+            "csens": 0.35,  # mmol/L / gram
             "cpeak": 120.0 / cfg.dt * cfg.gscale,
         }
 
